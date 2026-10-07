@@ -3,7 +3,12 @@ import { FEATURE_ORDER, Prediction, riskBand } from "../types/fraud";
 let session: any = null;
 let ortNs: any = null;
 let threshold = 0.5;
+let platt: { a: number; b: number } | null = null;
 let ready = false;
+
+export function applyPlatt(p: number, a: number, b: number): number {
+  return 1 / (1 + Math.exp(-(a * p + b)));
+}
 
 // onnxruntime-web is loaded from CDN, never bundled: its threaded wasm
 // (~27 MiB) exceeds Cloudflare Pages' 25 MiB file cap, and the JSEP proxy
@@ -29,6 +34,11 @@ async function ensureSession() {
     if (metaRes.ok) {
       const m = await metaRes.json();
       if (typeof m.threshold === "number") threshold = m.threshold;
+    }
+    const plattRes = await fetch("/data/platt.json");
+    if (plattRes.ok) {
+      const q = await plattRes.json();
+      if (typeof q.a === "number" && typeof q.b === "number") platt = { a: q.a, b: q.b };
     }
   } catch {}
   try {
@@ -66,6 +76,8 @@ export async function predict(values: Record<string, number>): Promise<Predictio
       p = Number(d[0]);
       if (p > 1 || p < 0) p = 1 / (1 + Math.exp(-p));
     }
+    // Platt calibration (sigmoid fitted on validation data) when available
+    if (platt) p = applyPlatt(p, platt.a, platt.b);
   } else {
     // demo fallback: logistic on Amount only, clearly labeled upstream
     const amt = Number(values["Amount"] ?? 0);

@@ -9,12 +9,14 @@ export default function Insights() {
   const [pr, setPr] = useState<any>({ precision: [], recall: [] });
   const [thr, setThr] = useState<any>({ selected: 0.5, curve: [] });
   const [cm, setCm] = useState<number[][]>([[0, 0], [0, 0]]);
+  const [pak, setPak] = useState<any[]>([]);
   useEffect(() => {
     loadJson("/data/model_comparison.json", []).then(({ data }) => setComp(Array.isArray(data) ? data : []));
     loadJson("/data/roc_curve.json", { fpr: [], tpr: [] }).then(({ data }) => setRoc(data));
     loadJson("/data/pr_curve.json", { precision: [], recall: [] }).then(({ data }) => setPr(data));
     loadJson("/data/threshold_analysis.json", { selected: 0.5, curve: [] }).then(({ data }) => setThr(data));
     loadJson("/data/confusion_matrix.json", { matrix: [[0, 0], [0, 0]] }).then(({ data }) => setCm(data.matrix ?? [[0, 0], [0, 0]]));
+    loadJson("/data/precision_at_k.json", []).then(({ data }) => setPak(Array.isArray(data) ? data : []));
   }, []);
   const rocData = (roc.fpr || []).map((f: number, i: number) => ({ fpr: f, tpr: roc.tpr[i] }));
   const prData = (pr.recall || []).map((r: number, i: number) => ({ recall: r, precision: pr.precision[i] }));
@@ -38,6 +40,11 @@ export default function Insights() {
           <div className="border rounded-xl p-3 bg-orange-50"><div className="font-medium">False Negative</div><div className="kpi">{cm[1][0].toLocaleString()}</div><div className="muted">fraud missed — the dangerous error</div></div>
           <div className="border rounded-xl p-3 bg-red-50"><div className="font-medium">True Positive</div><div className="kpi">{cm[1][1].toLocaleString()}</div><div className="muted">fraud caught</div></div>
         </div>
+      </div>
+      <div className="card mt-4"><h3 className="font-medium">Alert budget — precision at k</h3>
+        <p className="text-sm text-stone-600 mt-1">If reviewers can only check the riskiest slice of traffic, what do they get? Reviewing the top 1% catches 91% of fraud.</p>
+        <div className="overflow-auto"><table className="text-xs w-full mt-2"><thead><tr>{["Top slice", "Flagged", "Precision", "Recall"].map(h => <th key={h} className="text-left p-1 border-b">{h}</th>)}</tr></thead>
+        <tbody>{pak.map((r: any, i: number) => <tr key={i}><td className="p-1 border-b">top {r.k_pct}%</td><td className="p-1 border-b">{Number(r.flagged).toLocaleString()}</td><td className="p-1 border-b">{(Number(r.precision) * 100).toFixed(1)}%</td><td className="p-1 border-b">{(Number(r.recall) * 100).toFixed(1)}%</td></tr>)}</tbody></table></div>
       </div>
       <div className="card mt-4"><h3 className="font-medium">Threshold (selected {Number(thr.selected).toFixed(3)})</h3><div className="h-56"><ResponsiveContainer><LineChart data={thr.curve}><XAxis dataKey="threshold" /><YAxis /><Tooltip /><Line type="monotone" dataKey="precision" dot={false} /><Line type="monotone" dataKey="recall" dot={false} /><Line type="monotone" dataKey="f1" dot={false} /></LineChart></ResponsiveContainer></div>
       <p className="text-sm text-stone-600 mt-2">creditcard.csv → Python pipeline → evaluation → ONNX → React → ONNX Runtime Web → Cloudflare Pages. V1–V28 are anonymized PCA components; importance = model influence, not causality.</p></div>

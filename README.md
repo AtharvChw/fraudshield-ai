@@ -33,13 +33,14 @@ No Flask/FastAPI/Render — production inference happens on-device. CSV uploads 
 |---|---|---|---|---|---|
 | Logistic Regression (weighted) | 0.059 | 0.886 | 0.111 | 0.973 | 0.682 |
 | Logistic Regression (SMOTE) | 0.137 | 0.861 | 0.237 | 0.969 | 0.708 |
-| **Random Forest (SMOTE) — deployed** | **0.820** | **0.837** | **0.828** | **0.967** | **0.860** |
+| **Random Forest (SMOTE) — deployed** | **0.828** | **0.837** | **0.833** | **0.967** | **0.860** |
 | Random Forest (weighted) | 0.949 | 0.709 | 0.812 | 0.947 | 0.811 |
 | HistGradientBoosting (SMOTE) | 0.719 | 0.810 | 0.762 | 0.951 | 0.795 |
 
-- **Deployed:** Random Forest + train-only SMOTE (best val PR-AUC), threshold **0.51** tuned on validation.
+- **Deployed:** Random Forest + train-only SMOTE (best val PR-AUC), Platt-calibrated on validation (log-loss 0.0068 → 0.0032, F1 0.828 → 0.833), threshold **0.06** on the calibrated scale, tuned on validation.
 - **Test confusion matrix:** TN 56,846 · FP 18 · FN 16 · TP 82.
-- **ONNX parity:** max probability diff 2.2e-10 (tolerance 1e-4).
+- **ONNX parity:** max probability diff 2.2e-10 (tolerance 1e-4). The RF graph is exported as-is; the Platt sigmoid (`public/data/platt.json`) is applied in TypeScript and covered by a vitest parity test.
+- **Alert budget:** reviewing the riskiest top 1% of traffic catches 91% of fraud at 15.6% precision (`Model Insights` page).
 - SMOTE helped the forest slightly (+0.004 PR-AUC) but wrecked logistic precision — so it was kept only where it helped.
 
 ## App pages
@@ -67,7 +68,7 @@ npm run preview
 
 ## Deploy (Cloudflare Pages)
 
-Build command `npm run build`, output `dist`. SPA fallback (`public/_redirects`) and ONNX caching (`public/_headers`) included:
+Build command `npm run build`, output `dist`. SPA fallback (`public/_redirects`) and ONNX caching (`public/_headers`) included. Pushes to `main` auto-deploy via `.github/workflows/deploy.yml` (needs `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` repo secrets):
 
 ```bash
 npx wrangler pages deploy dist --project-name fraudshield-ai

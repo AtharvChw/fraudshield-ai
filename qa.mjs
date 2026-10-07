@@ -1,7 +1,7 @@
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'fs';
 
-const BASE = 'https://7c3341f8.fraudshield-ai-7hk.pages.dev';
+const BASE = 'https://fraudshield-ai-7hk.pages.dev';
 const errors = [];
 const failed = [];
 
@@ -20,11 +20,16 @@ for (const [route, h1] of [['/', 'FraudShield AI'], ['/analyze', 'Analyze Transa
   await page.screenshot({ path: `qa/route-${route === '/' ? 'home' : route.slice(1)}.png` });
 }
 
-// 2. mobile width
+// 2. mobile width + dark mode
 await page.setViewportSize({ width: 375, height: 812 });
 await page.goto(BASE + '/', { waitUntil: 'networkidle' });
 await page.screenshot({ path: 'qa/mobile-home.png' });
 await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+await page.evaluate(() => { localStorage.setItem('fs-theme', 'dark'); });
+await page.reload({ waitUntil: 'networkidle' });
+await page.screenshot({ path: 'qa/dark-home.png' });
+await page.evaluate(() => { localStorage.setItem('fs-theme', 'light'); });
 
 // 3. real inference: suspicious example -> Analyze
 await page.goto(BASE + '/analyze', { waitUntil: 'networkidle' });
