@@ -1,0 +1,37 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+ml/outputs/figures/*.png
+!ml/outputs/figures/.gitkeep
+ml/outputs/metrics/*.json
+!ml/outputs/metrics/.gitkeep
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Data (large)
+ml/data/creditcard.csv
+ml/data/*.zip
+
+# Env
+.env
+.env.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# QA + logs
+qa/*.png
+pipeline*.log
+playwright-report/
+test-results/
+!public/models/fraud_model.onnx
+!public/data/*.json

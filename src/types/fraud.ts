@@ -1,0 +1,9 @@
+export const FEATURE_ORDER = ["Time","V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20","V21","V22","V23","V24","V25","V26","V27","V28","Amount"];
+export type RiskBand = "Low" | "Moderate" | "Elevated" | "High";
+export interface Prediction { fraudProbability: number; legitProbability: number; predictedClass: 0|1; threshold: number; risk: RiskBand; }
+export function riskBand(p: number, t: number): RiskBand {
+  if (p < t * 0.5) return "Low";
+  if (p < t) return "Moderate";
+  if (p < Math.min(0.9, t + 0.3)) return "Elevated";
+  return "High";
+}
