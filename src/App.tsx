@@ -6,6 +6,7 @@ import Batch from "./pages/Batch";
 import Insights from "./pages/Insights";
 import About from "./pages/About";
 import { ShieldCheck, Sun, Moon } from "lucide-react";
+import GuidedDemo from "./components/GuidedDemo";
 
 const tabs = [
   ["Overview", "/"],
@@ -18,10 +19,16 @@ const tabs = [
 export default function App() {
   const loc = useLocation();
   const [dark, setDark] = useState(() => localStorage.getItem("fs-theme") === "dark");
+  const [tour, setTour] = useState(false);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("fs-theme", dark ? "dark" : "light");
   }, [dark]);
+  useEffect(() => {
+    const start = () => setTour(true);
+    window.addEventListener("fs-start-tour", start);
+    return () => window.removeEventListener("fs-start-tour", start);
+  }, []);
   return (
     <div className="min-h-screen">
       <header className="border-b bg-white/80 backdrop-blur sticky top-0 z-10 dark:bg-slate-950/80 dark:border-slate-800">
@@ -50,6 +57,7 @@ export default function App() {
           Predictions are for demonstration and educational purposes and should not be used as the sole basis for a real financial decision.
         </footer>
       </main>
+      {tour && <GuidedDemo onClose={() => setTour(false)} />}
     </div>
   );
 }

@@ -27,12 +27,12 @@ export default function Analyze() {
             </div>
           </details>
           <div className="flex gap-2 mt-4 flex-wrap">
-            <button className="btn-primary" disabled={loading} onClick={run}>{loading ? "Scoring…" : "Analyze"}</button>
-            <button className="btn-ghost" onClick={() => demo.length && setVals({ ...vals, ...Object.fromEntries(FEATURE_ORDER.map(k => [k, Number((demo.find((d: any) => d.label === 0) || {})[k] ?? 0)])) })}>Load safe example</button>
-            <button className="btn-ghost" onClick={() => demo.length && setVals({ ...vals, ...Object.fromEntries(FEATURE_ORDER.map(k => [k, Number((demo.find((d: any) => d.label === 1) || {})[k] ?? 0)])) })}>Load suspicious example</button>
+            <button className="btn-primary" data-tour="analyze-btn" disabled={loading} onClick={run}>{loading ? "Scoring…" : "Analyze"}</button>
+            <button className="btn-ghost" disabled={!demo.length} title={demo.length ? "" : "Loading examples…"} onClick={() => demo.length && setVals({ ...vals, ...Object.fromEntries(FEATURE_ORDER.map(k => [k, Number((demo.find((d: any) => d.label === 0) || {})[k] ?? 0)])) })}>Load safe example</button>
+            <button className="btn-ghost" data-tour="load-fraud" disabled={!demo.length} title={demo.length ? "" : "Loading examples…"} onClick={() => demo.length && setVals({ ...vals, ...Object.fromEntries(FEATURE_ORDER.map(k => [k, Number((demo.find((d: any) => d.label === 1) || {})[k] ?? 0)])) })}>Load suspicious example</button>
           </div>
         </div>
-        <div className="card">
+        <div className="card" data-tour="analyze-result">
           {!res ? <p className="muted text-sm">Run analysis to see fraud probability, threshold and risk band.</p> : (
             <div>
               <div className="flex items-center gap-2">

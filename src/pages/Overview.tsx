@@ -20,8 +20,9 @@ export default function Overview() {
       <div className="flex gap-3 mb-6">
         <Link to="/analyze" className="btn-primary">Analyze Transaction</Link>
         <Link to="/batch" className="btn-ghost">Batch Scan CSV</Link>
+        <button className="btn-ghost border-amber-400 text-amber-700 dark:text-amber-300" onClick={() => window.dispatchEvent(new Event("fs-start-tour"))}>▶ Guided Demo (60s)</button>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-tour="kpis">
         <MetricCard label="Transactions" value={String(dash.total)} />
         <MetricCard label="Fraud cases" value={String(dash.fraud)} />
         <MetricCard label="Fraud rate" value={`${(Number(dash.fraud_rate) * 100).toFixed(3)}%`} />
@@ -39,7 +40,7 @@ export default function Overview() {
           </ResponsiveContainer>
         </div>
       </div>
-      <div className="card">
+      <div className="card" data-tour="amount-chart">
         <h3 className="font-medium mb-2">Amount by class</h3>
         <p className="muted text-xs">Fraud clusters in tiny amounts — 181 of 492 frauds sit in the $0–1 bin.</p>
         <div className="h-48 mt-2">

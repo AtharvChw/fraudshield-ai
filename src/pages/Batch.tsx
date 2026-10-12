@@ -63,14 +63,14 @@ export default function Batch() {
     <div>
       <PageHeader title="Batch Scan CSV" sub="Client-side scoring. Columns Time,V1..V28,Amount. Class optional." />
       <div className="card">
-        <input type="file" accept=".csv" onChange={e => e.target.files && onFile(e.target.files[0])} />
+        <input type="file" accept=".csv" data-tour="csv-input" onChange={e => e.target.files && onFile(e.target.files[0])} />
         <p className="muted text-xs mt-2">Analysis runs locally in your browser. Uploaded transaction data is not sent to a prediction server.</p>
         {error && <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-3" role="alert">{error}</p>}
         {info && <p className="muted text-xs mt-2">{info}</p>}
         {!scored.length && !rows.length && !error && <p className="muted text-sm mt-3">Upload a CSV to begin — required columns: Time, V1…V28, Amount. Try the demo file at <code>/data/demo_transactions.csv</code>.</p>}
       </div>
       {!!scored.length && (
-        <div className="card mt-4">
+        <div className="card mt-4" data-tour="batch-results">
           {(() => {
             const probs = scored.map(r => Number(r.FraudProbability)).filter(n => !Number.isNaN(n));
             const avg = probs.length ? probs.reduce((a, b) => a + b, 0) / probs.length : 0;

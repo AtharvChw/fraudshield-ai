@@ -24,7 +24,7 @@ export default function Insights() {
     <div>
       <PageHeader title="Model Insights" sub="How the detector was trained, tuned and why PR-AUC matters for rare fraud." />
       <div className="card"><h3 className="font-medium">The problem</h3><p className="text-sm text-stone-600 mt-1">Fraud is ~0.17% of transactions. Accuracy misleads; we optimize Precision (of predicted fraud, how many real?), Recall (of real fraud, how many caught?), F1 and PR-AUC (ranking quality when positives are rare).</p></div>
-      <div className="card mt-4"><h3 className="font-medium">Model comparison</h3>
+      <div className="card mt-4" data-tour="model-comparison"><h3 className="font-medium">Model comparison</h3>
         <div className="overflow-auto"><table className="text-xs w-full mt-2"><thead><tr>{["Model", "Precision", "Recall", "F1", "ROC-AUC", "PR-AUC"].map(h => <th key={h} className="text-left p-1 border-b">{h}</th>)}</tr></thead>
         <tbody>{comp.map((c: any, i: number) => <tr key={i}><td className="p-1 border-b">{c.model}</td><td className="p-1 border-b">{Number(c.precision).toFixed(3)}</td><td className="p-1 border-b">{Number(c.recall).toFixed(3)}</td><td className="p-1 border-b">{Number(c.f1).toFixed(3)}</td><td className="p-1 border-b">{Number(c.roc_auc).toFixed(3)}</td><td className="p-1 border-b">{Number(c.pr_auc).toFixed(3)}</td></tr>)}</tbody></table></div>
         <div className="h-56 mt-4"><ResponsiveContainer><BarChart data={comp.map((c: any) => ({ n: c.model, f1: c.f1 }))}><XAxis dataKey="n" fontSize={10} /><YAxis /><Tooltip /><Bar dataKey="f1" /></BarChart></ResponsiveContainer></div>
