@@ -10,19 +10,21 @@ export function applyPlatt(p: number, a: number, b: number): number {
   return 1 / (1 + Math.exp(-(a * p + b)));
 }
 
-// onnxruntime-web is loaded from CDN, never bundled: its threaded wasm
-// (~27 MiB) exceeds Cloudflare Pages' 25 MiB file cap, and the JSEP proxy
-// loader resolves wasm relative to the JS file (ignoring wasmPaths), so a
-// fully-CDN runtime is the only setup where the wasm URL is correct.
-// Pinned to the installed npm version. If the CDN is unreachable,
-// inference falls back to demo mode in predict().
-const ORT_CDN =
-  "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.bundle.min.mjs";
-
+// ONNX Runtime Web, CPU-only build, served from OUR origin.
+// Previously this was a dynamic import of the jsDelivr JSEP bundle, which
+// pulls a 27 MiB wasm on every cold visit — too slow under load and a hard
+// dependency on a third party for a live demo. The CPU build's wasm is
+// 13.6 MiB and fits Cloudflare Pages' 25 MiB file cap, so it is copied into
+// public/ort at build time (scripts/copy-ort.mjs) and resolved via wasmPaths.
+// WebGPU buys nothing here: the model is a small random forest.
 async function ensureSession() {
   if (session) return session;
   try {
-    ortNs = await import(/* @vite-ignore */ ORT_CDN);
+    ortNs = await import("onnxruntime-web/wasm");
+    // single thread: threaded wasm needs SharedArrayBuffer, which requires
+    // COOP/COEP headers we do not set on Pages
+    ortNs.env.wasm.numThreads = 1;
+    ortNs.env.wasm.wasmPaths = "/ort/";
   } catch {
     session = null;
     ready = false;

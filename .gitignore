@@ -12,6 +12,8 @@ ml/outputs/metrics/*.json
 node_modules/
 dist/
 dist-ssr/
+# generated at build time from node_modules by scripts/copy-ort.mjs
+public/ort/
 *.local
 
 # Data (large)

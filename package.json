@@ -5,7 +5,9 @@
   "type": "module",
   "description": "FraudShield AI — browser-local credit card fraud detection with ONNX Runtime Web",
   "scripts": {
+    "predev": "node scripts/copy-ort.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy-ort.mjs",
     "build": "tsc --noEmit && vite build && node --input-type=module -e \"import {readdirSync,rmSync,statSync} from 'fs'; for (const f of readdirSync('dist/assets')) { const p='dist/assets/'+f; if (/^ort-.*\\.wasm$/.test(f)) { console.log('dropping oversized', p, Math.round(statSync(p).size/1048576)+'MiB'); rmSync(p); } }\"",
     "deploy": "npm run build && wrangler pages deploy dist --project-name fraudshield-ai",
     "preview": "vite preview",
