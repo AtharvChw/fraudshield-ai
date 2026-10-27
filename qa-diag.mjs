@@ -1,6 +1,6 @@
 import { chromium } from '@playwright/test';
 
-const BASE = 'https://b55c28c2.fraudshield-ai-7hk.pages.dev';
+const BASE = 'https://fraudshield-ai-7hk.pages.dev';
 const browser = await chromium.launch();
 
 for (let i = 1; i <= 3; i++) {
