@@ -65,7 +65,7 @@ export default function Batch() {
       <div className="card">
         <input type="file" accept=".csv" data-tour="csv-input" onChange={e => e.target.files && onFile(e.target.files[0])} />
         <p className="muted text-xs mt-2">Analysis runs locally in your browser. Uploaded transaction data is not sent to a prediction server.</p>
-        {error && <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-3" role="alert">{error}</p>}
+        {error && <p className="text-sm text-red-700 bg-red-50 border border-red-200 dark:text-red-300 dark:bg-red-900/30 dark:border-red-800 rounded-lg px-3 py-2 mt-3" role="alert">{error}</p>}
         {info && <p className="muted text-xs mt-2">{info}</p>}
         {!scored.length && !rows.length && !error && <p className="muted text-sm mt-3">Upload a CSV to begin — required columns: Time, V1…V28, Amount. Try the demo file at <code>/data/demo_transactions.csv</code>.</p>}
       </div>
@@ -77,7 +77,7 @@ export default function Batch() {
             const top = scored.reduce((a, b) => Number(b.FraudProbability) > Number(a.FraudProbability) ? b : a, scored[0]);
             const flagged = scored.filter(r => String(r.PredictedClass) === "1").length;
             return (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm">
                 <div><div className="muted">Total rows</div><div className="kpi">{scored.length}</div></div>
                 <div><div className="muted">Flagged fraud</div><div className="kpi">{flagged} ({(flagged / scored.length * 100).toFixed(1)}%)</div></div>
                 <div><div className="muted">Avg fraud prob</div><div className="kpi">{(avg * 100).toFixed(2)}%</div></div>
@@ -88,8 +88,8 @@ export default function Batch() {
           <div className="text-sm mb-2">{busy && "Scoring…"}</div>
           <div className="overflow-auto max-h-96">
             <table className="text-xs w-full">
-              <thead><tr>{["FraudProbability", "PredictedClass", "RiskLevel", "Amount"].map(h => <th key={h} className="text-left p-1 border-b">{h}</th>)}</tr></thead>
-              <tbody>{scored.slice(0, 200).map((r, i) => <tr key={i}><td className="p-1 border-b">{r.FraudProbability}</td><td className="p-1 border-b">{r.PredictedClass}</td><td className="p-1 border-b">{r.RiskLevel}</td><td className="p-1 border-b">{r.Amount}</td></tr>)}</tbody>
+              <thead><tr>{["Fraud prob.", "PredictedClass", "RiskLevel", "Amount"].map(h => <th key={h} className="text-left p-1 border-b">{h}</th>)}</tr></thead>
+              <tbody>{scored.slice(0, 200).map((r, i) => <tr key={i}><td className="p-1 border-b">{r.FraudProbability === "err" ? "err" : `${(Number(r.FraudProbability) * 100).toFixed(2)}%`}</td><td className="p-1 border-b">{r.PredictedClass}</td><td className="p-1 border-b">{r.RiskLevel}</td><td className="p-1 border-b">{r.Amount}</td></tr>)}</tbody>
             </table>
           </div>
           <button className="btn-primary mt-3" onClick={download} disabled={busy}>Download scored CSV</button>

@@ -30,6 +30,8 @@ Thumbs.db
 
 # QA + logs
 qa/*.png
+qa/fix/
+qa/*.log
 pipeline*.log
 playwright-report/
 test-results/

@@ -20,7 +20,7 @@ export default function Analyze() {
           <label className="text-sm">Time (seconds from first transaction)<input className="input mt-1" type="number" value={vals.Time} onChange={e => set("Time", Number(e.target.value))} /></label>
           <label className="text-sm block mt-3">Amount<input className="input mt-1" type="number" value={vals.Amount} onChange={e => set("Amount", Number(e.target.value))} /></label>
           <details className="mt-3"><summary className="text-sm cursor-pointer">Advanced anonymized features (V1–V28)</summary>
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
               {FEATURE_ORDER.filter(f => f.startsWith("V")).map(f => (
                 <label key={f} className="text-xs">{f}<input className="input" type="number" step="any" value={vals[f]} onChange={e => set(f, Number(e.target.value))} /></label>
               ))}
@@ -36,12 +36,17 @@ export default function Analyze() {
           {!res ? <p className="muted text-sm">Run analysis to see fraud probability, threshold and risk band.</p> : (
             <div>
               <div className="flex items-center gap-2">
-                <span className={`text-xl font-semibold ${res.predictedClass ? "text-red-700" : "text-green-700"}`}>{res.predictedClass ? "FRAUDULENT" : "LEGITIMATE"}</span>
+                <span className={`text-xl font-semibold ${res.predictedClass ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>{res.predictedClass ? "FRAUDULENT" : "LEGITIMATE"}</span>
                 <RiskBadge risk={res.risk} />
               </div>
               <p className="text-sm mt-1">{res.predictedClass ? "The model estimates this transaction as high risk." : "The model estimates this transaction as low risk."}</p>
               <div className="mt-3 text-sm">Fraud probability: <b>{(res.fraudProbability * 100).toFixed(2)}%</b> · Threshold: <b>{Number(res.threshold).toFixed(3)}</b></div>
-              <div className="h-2 bg-stone-200 rounded mt-2"><div className="h-2 rounded bg-slate-900" style={{ width: `${Math.round(res.fraudProbability * 100)}%` }} /></div>
+              <p className="muted text-xs mt-1">
+                {res.predictedClass
+                  ? `Flagged at ${(res.fraudProbability / (res.threshold || 1)).toFixed(1)}× the operating threshold. The cut-off is tuned low on validation data because fraud is only 0.17% of traffic.`
+                  : "Below the operating threshold — not flagged."}
+              </p>
+              <div className="h-2 bg-stone-200 dark:bg-slate-700 rounded mt-2"><div className={`h-2 rounded ${res.predictedClass ? "bg-red-600" : "bg-green-600"}`} style={{ width: `${Math.min(100, Math.round(res.fraudProbability * 100))}%` }} /></div>
             </div>
           )}
           <p className="muted text-xs mt-4">Predictions are for demonstration and educational purposes and should not be used as the sole basis for a real financial decision.</p>
