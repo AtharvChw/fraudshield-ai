@@ -30,7 +30,7 @@ async function ensureSession() {
     ready = false;
     return session;
   }
-  // try real model, fall back to null (demo mode)
+  // metadata + calibration are best-effort; the model itself decides `ready`
   try {
     const metaRes = await fetch("/data/model_metrics.json");
     if (metaRes.ok) {
@@ -53,40 +53,112 @@ async function ensureSession() {
   return session;
 }
 
+/** True only when the real ONNX model is loaded and usable. */
 export async function modelStatus() {
   await ensureSession();
   return { ready, threshold };
 }
 
-export async function predict(values: Record<string, number>): Promise<Prediction> {
-  const s = await ensureSession();
-  const input = new Float32Array(FEATURE_ORDER.map(k => Number(values[k] ?? 0)));
-  let p = 0;
-  if (s && ortNs) {
-    const tensor = new ortNs.Tensor("float32", input, [1, FEATURE_ORDER.length]);
-    const out = await s.run({ input: tensor });
-    // zipmap=False model yields 'label' + 'output_probability' tensors;
-    // scan every output for the 2-column probability matrix.
-    let found = false;
-    for (const k of Object.keys(out)) {
-      const d = out[k].data as ArrayLike<number>;
-      if (d.length === 2 && !found) { p = Number(d[1]); found = true; }
+/**
+ * Pulls the positive-class probability out of the model's outputs.
+ * zipmap=False gives a [n, 2] probability matrix; we take the second column.
+ * Returns null when no output looks like that matrix.
+ */
+function extractProbs(out: Record<string, any>, n: number): number[] | null {
+  for (const k of Object.keys(out)) {
+    const d = out[k].data as ArrayLike<number>;
+    if (d && d.length === n * 2) {
+      const probs = new Array<number>(n);
+      for (let i = 0; i < n; i++) probs[i] = Number(d[i * 2 + 1]);
+      return probs;
     }
-    if (!found) {
-      const k = Object.keys(out)[0];
-      const d = out[k].data as ArrayLike<number>;
-      p = Number(d[0]);
-      if (p > 1 || p < 0) p = 1 / (1 + Math.exp(-p));
-    }
-    // Platt calibration (sigmoid fitted on validation data) when available
-    if (platt) p = applyPlatt(p, platt.a, platt.b);
-  } else {
-    // demo fallback: logistic on Amount only, clearly labeled upstream
-    const amt = Number(values["Amount"] ?? 0);
-    p = 1 / (1 + Math.exp(-(amt - 500) / 200));
   }
+  return null;
+}
+
+function finalize(p: number, demoMode: boolean): Prediction {
   const cls = (p >= threshold ? 1 : 0) as 0 | 1;
-  return { fraudProbability: p, legitProbability: 1 - p, predictedClass: cls, threshold, risk: riskBand(p, threshold) };
+  return {
+    fraudProbability: p,
+    legitProbability: 1 - p,
+    predictedClass: cls,
+    threshold,
+    risk: riskBand(p, threshold),
+    demoMode,
+  };
+}
+
+/**
+ * Scores many rows in ONE ONNX run — the model's input axis is dynamic, so a
+ * [n, 30] tensor is valid. This is what Batch uses: one session call instead of
+ * one per row (a 10k-row CSV used to mean 10k sequential runs + React renders).
+ * Single-row prediction routes through here too, so the two paths can never
+ * drift apart.
+ */
+export async function predictMany(rows: Record<string, number>[]): Promise<Prediction[]> {
+  if (!rows.length) return [];
+  const s = await ensureSession();
+  const n = rows.length;
+
+  if (s && ortNs) {
+    const flat = new Float32Array(n * FEATURE_ORDER.length);
+    for (let i = 0; i < n; i++) {
+      const row = rows[i];
+      for (let j = 0; j < FEATURE_ORDER.length; j++) {
+        flat[i * FEATURE_ORDER.length + j] = Number(row[FEATURE_ORDER[j]] ?? 0);
+      }
+    }
+
+    // Preferred path: one [n, 30] run. The ONNX graph is exported with a
+    // dynamic batch axis, but if a future re-export pins it to 1 this throws —
+    // so we degrade to per-row runs on the SAME session rather than all the way
+    // down to the heuristic. Both paths are the real model, so scores match.
+    try {
+      const tensor = new ortNs.Tensor("float32", flat, [n, FEATURE_ORDER.length]);
+      const out = await s.run({ input: tensor });
+      let probs = extractProbs(out, n);
+      if (!probs) {
+        // single-output fallback: raw scores, squashed if they are not probabilities
+        const k = Object.keys(out)[0];
+        const d = out[k].data as ArrayLike<number>;
+        probs = Array.from({ length: n }, (_, i) => {
+          const v = Number(d[i] ?? d[0]);
+          return v > 1 || v < 0 ? 1 / (1 + Math.exp(-v)) : v;
+        });
+      }
+      return probs.map(p => finalize(platt ? applyPlatt(p, platt.a, platt.b) : p, false));
+    } catch {
+      try {
+        const single: number[] = [];
+        for (let i = 0; i < n; i++) {
+          const one = new ortNs.Tensor("float32", flat.slice(i * FEATURE_ORDER.length, (i + 1) * FEATURE_ORDER.length), [1, FEATURE_ORDER.length]);
+          const out = await s.run({ input: one });
+          const probs = extractProbs(out, 1);
+          if (probs) single.push(probs[0]);
+          else {
+            const k = Object.keys(out)[0];
+            const v = Number((out[k].data as ArrayLike<number>)[0]);
+            single.push(v > 1 || v < 0 ? 1 / (1 + Math.exp(-v)) : v);
+          }
+        }
+        return single.map(p => finalize(platt ? applyPlatt(p, platt.a, platt.b) : p, false));
+      } catch {
+        // fall through to the heuristic below
+      }
+    }
+  }
+
+  // Honest fallback: a heuristic, NOT the trained model. Every Prediction
+  // carries demoMode=true so the UI can label it instead of passing it off.
+  return rows.map(row => {
+    const amt = Number(row["Amount"] ?? 0);
+    return finalize(1 / (1 + Math.exp(-(amt - 500) / 200)), true);
+  });
+}
+
+export async function predict(values: Record<string, number>): Promise<Prediction> {
+  const [p] = await predictMany([values]);
+  return p;
 }
 
 export { FEATURE_ORDER };

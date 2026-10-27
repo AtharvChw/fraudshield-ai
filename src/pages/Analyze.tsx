@@ -33,21 +33,29 @@ export default function Analyze() {
           </div>
         </div>
         <div className="card" data-tour="analyze-result">
-          {!res ? <p className="muted text-sm">Run analysis to see fraud probability, threshold and risk band.</p> : (
-            <div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xl font-semibold ${res.predictedClass ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>{res.predictedClass ? "FRAUDULENT" : "LEGITIMATE"}</span>
-                <RiskBadge risk={res.risk} />
+          {/* polite live region: screen readers announce the verdict without a focus jump */}
+          <div role="status" aria-live="polite">
+            {!res ? <p className="muted text-sm">Run analysis to see fraud probability, threshold and risk band.</p> : (
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xl font-semibold ${res.predictedClass ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>{res.predictedClass ? "FRAUDULENT" : "LEGITIMATE"}</span>
+                  <RiskBadge risk={res.risk} />
+                </div>
+                <p className="text-sm mt-1">{res.predictedClass ? "The model estimates this transaction as high risk." : "The model estimates this transaction as low risk."}</p>
+                <div className="mt-3 text-sm">Fraud probability: <b>{(res.fraudProbability * 100).toFixed(2)}%</b> · Threshold: <b>{Number(res.threshold).toFixed(3)}</b></div>
+                <p className="muted text-xs mt-1">
+                  {res.predictedClass
+                    ? `Flagged at ${(res.fraudProbability / (res.threshold || 1)).toFixed(1)}× the operating threshold. The cut-off is tuned low on validation data because fraud is only 0.17% of traffic.`
+                    : "Below the operating threshold — not flagged."}
+                </p>
+                <div className="h-2 bg-stone-200 dark:bg-slate-700 rounded mt-2"><div className={`h-2 rounded ${res.predictedClass ? "bg-red-600" : "bg-green-600"}`} style={{ width: `${Math.min(100, Math.round(res.fraudProbability * 100))}%` }} /></div>
               </div>
-              <p className="text-sm mt-1">{res.predictedClass ? "The model estimates this transaction as high risk." : "The model estimates this transaction as low risk."}</p>
-              <div className="mt-3 text-sm">Fraud probability: <b>{(res.fraudProbability * 100).toFixed(2)}%</b> · Threshold: <b>{Number(res.threshold).toFixed(3)}</b></div>
-              <p className="muted text-xs mt-1">
-                {res.predictedClass
-                  ? `Flagged at ${(res.fraudProbability / (res.threshold || 1)).toFixed(1)}× the operating threshold. The cut-off is tuned low on validation data because fraud is only 0.17% of traffic.`
-                  : "Below the operating threshold — not flagged."}
-              </p>
-              <div className="h-2 bg-stone-200 dark:bg-slate-700 rounded mt-2"><div className={`h-2 rounded ${res.predictedClass ? "bg-red-600" : "bg-green-600"}`} style={{ width: `${Math.min(100, Math.round(res.fraudProbability * 100))}%` }} /></div>
-            </div>
+            )}
+          </div>
+          {res?.demoMode && (
+            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 dark:text-amber-200 dark:bg-amber-900/30 dark:border-amber-800 rounded-lg px-3 py-2 mt-3" role="status">
+              <b>Demo mode.</b> The trained ONNX model did not load, so this score comes from a fallback heuristic based on transaction amount only. It is not a model prediction.
+            </p>
           )}
           <p className="muted text-xs mt-4">Predictions are for demonstration and educational purposes and should not be used as the sole basis for a real financial decision.</p>
         </div>

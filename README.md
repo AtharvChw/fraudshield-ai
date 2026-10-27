@@ -27,15 +27,28 @@ creditcard.csv → Python ML pipeline → evaluation → ONNX export
 
 No Flask/FastAPI/Render — production inference happens on-device. CSV uploads never leave the browser.
 
+## Browser inference (runtime)
+
+The trained Random Forest is exported to `ml/outputs/models/fraud_model.onnx` (~11 MB) and runs in the browser via ONNX Runtime Web. Because the app must be demo-ready anywhere, the runtime is **self-hosted**, not fetched from a CDN:
+
+- **Build:** `onnxruntime-web/wasm` — CPU-only build, ~13.6 MiB wasm (the default JSEP/WebGPU build is ~27 MiB, over Cloudflare Pages' 25 MiB file cap). Copied into `public/ort/` on every build by `scripts/copy-ort.mjs` and gitignored (`public/ort/`).
+- **Loading:** `wasmPaths = "/ort/"`, `numThreads = 1` (SharedArrayBuffer needs COOP/COEP headers Pages doesn't set). Model is `models/fraud_model.onnx` with long-lived cache headers.
+- **Cold start:** first visit downloads ~25 MB total (wasm + model), then inference runs entirely on-device — no third-party calls, no network after load.
+
+If the model or wasm fails to load (offline, blocked origin), Analyze and Batch fall back to an amount-only heuristic — and show an **amber "Demo mode" banner** so a score is never mistaken for a model prediction.
+
 ## Results (real, from `python ml/run_pipeline.py` on the untouched test set)
 
-| Model | Prec | Rec | F1 | ROC-AUC | PR-AUC |
+| Model | Thr | Prec | Rec | F1 | ROC-AUC | PR-AUC |
 |---|---|---|---|---|---|
-| Logistic Regression (weighted) | 0.059 | 0.886 | 0.111 | 0.973 | 0.682 |
-| Logistic Regression (SMOTE) | 0.137 | 0.861 | 0.237 | 0.969 | 0.708 |
-| **Random Forest (SMOTE) — deployed** | **0.828** | **0.837** | **0.833** | **0.967** | **0.860** |
-| Random Forest (weighted) | 0.949 | 0.709 | 0.812 | 0.947 | 0.811 |
-| HistGradientBoosting (SMOTE) | 0.719 | 0.810 | 0.762 | 0.951 | 0.795 |
+| Random Forest (SMOTE) — deployed | 0.06 | 0.828 | 0.837 | 0.833 | 0.967 | 0.860 |
+| Random Forest (weighted) | 0.27 | 0.882 | 0.837 | 0.859 | 0.952 | 0.858 |
+| HistGradientBoosting (SMOTE) | 0.92 | 0.802 | 0.786 | 0.794 | 0.962 | 0.647 |
+| Logistic Regression (SMOTE) | 0.95 | 0.509 | 0.878 | 0.644 | 0.976 | 0.734 |
+| Logistic Regression (weighted) | 0.95 | 0.316 | 0.888 | 0.467 | 0.974 | 0.709 |
+| HistGradientBoosting (weighted) | 0.94 | 0.522 | 0.725 | 0.607 | 0.786 | 0.464 |
+
+- `Thr` = each model's own F1-tuned threshold on the validation set. The deployed model is Platt-calibrated, so its threshold lives on the calibrated scale; F1/PR/ROC are computed on calibrated test probabilities. `public/data/model_comparison.json` holds the same numbers plus the deployed flag and calibration note — regenerate with `python ml/src/compare_tuned.py`.
 
 - **Deployed:** Random Forest + train-only SMOTE (best val PR-AUC), Platt-calibrated on validation (log-loss 0.0068 → 0.0032, F1 0.828 → 0.833), threshold **0.06** on the calibrated scale, tuned on validation.
 - **Test confusion matrix:** TN 56,846 · FP 18 · FN 16 · TP 82.
@@ -80,4 +93,4 @@ No card numbers, CVV, names, or uploads to any server — educational demo, not 
 
 ## Future improvements
 
-Probability calibration, SHAP-style model influence cards, IndexedDB batch history, dark mode, Precision@k alert-budget tuning.
+SHAP-style model influence cards, IndexedDB batch history, Precision@k alert-budget tuning.
