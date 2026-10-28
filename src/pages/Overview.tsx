@@ -29,7 +29,7 @@ export default function Overview() {
         <MetricCard label="Transactions" value={String(dash.total)} />
         <MetricCard label="Fraud cases" value={String(dash.fraud)} />
         <MetricCard label="Fraud rate" value={`${(Number(dash.fraud_rate) * 100).toFixed(3)}%`} />
-        <MetricCard label="Production model" value={String(dash.model)} sub={`R ${Number(dash.recall).toFixed(2)} · P ${Number(dash.precision).toFixed(2)} · PR-AUC ${Number(dash.pr_auc).toFixed(2)}`} />
+        <MetricCard label="Production model" value={String(dash.model)} valueClass="kpi-sm" sub={`R ${Number(dash.recall).toFixed(2)} · P ${Number(dash.precision).toFixed(2)} · PR-AUC ${Number(dash.pr_auc).toFixed(2)}`} />
       </div>
       <div className="grid md:grid-cols-2 gap-4 mt-4">
       <div className="card">

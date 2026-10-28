@@ -1,8 +1,8 @@
-export function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+export function MetricCard({ label, value, sub, valueClass = "" }: { label: string; value: string; sub?: string; valueClass?: string }) {
   return (
     <div className="card">
       <div className="muted">{label}</div>
-      <div className="kpi mt-1">{value}</div>
+      <div className={`kpi mt-1 ${valueClass}`} title={value}>{value}</div>
       {sub && <div className="muted mt-1">{sub}</div>}
     </div>
   );
